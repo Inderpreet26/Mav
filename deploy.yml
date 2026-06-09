@@ -1,0 +1,36 @@
+---
+- name: Deploy Maven Web Application to Tomcat
+  hosts: appserver
+  become: yes
+  tasks:
+
+    - name: Stop Tomcat
+      systemd:
+        name: tomcat
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove old deployment
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /opt/tomcat/webapps/maven-web-application
+        - /opt/tomcat/webapps/maven-web-application.war
+
+    - name: Copy WAR to Tomcat
+      copy:
+        src: /var/lib/jenkins/workspace/maven-web-application/target/maven-web-application.war
+        dest: /opt/tomcat/webapps/maven-web-application.war
+        mode: '0644'
+
+    - name: Start Tomcat
+      systemd:
+        name: tomcat
+        state: started
+
+    - name: Wait for port 8080
+      wait_for:
+        port: 8080
+        delay: 10
+        timeout: 60
